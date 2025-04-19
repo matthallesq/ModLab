@@ -1,19 +1,17 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../../../supabase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useNavigate, Link } from "react-router-dom";
-import AuthLayout from "./AuthLayout";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import AuthLayout from "./AuthLayout";
+import { supabase } from "../../../supabase/supabase";
 
-export default function SignUpForm() {
-  const [email, setEmail] = useState("");
+export default function ResetPasswordForm() {
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [error, setError] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signUp } = useAuth();
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,29 +44,34 @@ export default function SignUpForm() {
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError("Please enter a valid email address");
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await signUp(email, password, fullName);
+      const { error } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (error) throw error;
+
       toast({
-        title: "Account created successfully",
-        description: "Please check your email to verify your account.",
+        title: "Password updated",
+        description: "Your password has been successfully updated.",
         duration: 5000,
       });
+
+      // Redirect to login page after successful password reset
       navigate("/login");
     } catch (error: any) {
-      console.error("Sign up error:", error);
-      setError(error?.message || "Error creating account");
+      setError(error?.message || "Failed to reset password");
       toast({
-        title: "Sign up failed",
-        description: error?.message || "Error creating account",
+        title: "Error",
+        description: error?.message || "Failed to reset password",
         variant: "destructive",
         duration: 5000,
       });
@@ -80,56 +83,29 @@ export default function SignUpForm() {
   return (
     <AuthLayout>
       <div className="bg-white rounded-2xl shadow-sm p-8 w-full max-w-md mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold">Reset your password</h2>
+          <p className="text-gray-600 mt-2">Enter your new password below</p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <Label
-              htmlFor="fullName"
-              className="text-sm font-medium text-gray-700"
-            >
-              Full Name
-            </Label>
-            <Input
-              id="fullName"
-              placeholder="John Doe"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-              className="h-12 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label
-              htmlFor="email"
-              className="text-sm font-medium text-gray-700"
-            >
-              Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="name@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="h-12 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
           <div className="space-y-2">
             <Label
               htmlFor="password"
               className="text-sm font-medium text-gray-700"
             >
-              Password
+              New Password
             </Label>
             <Input
               id="password"
               type="password"
-              placeholder="Create a password"
+              placeholder="Create a new password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               className="h-12 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
             />
+
             <div className="mt-2 space-y-1 text-xs">
               <p
                 className={
@@ -174,6 +150,25 @@ export default function SignUpForm() {
               </p>
             </div>
           </div>
+
+          <div className="space-y-2">
+            <Label
+              htmlFor="confirmPassword"
+              className="text-sm font-medium text-gray-700"
+            >
+              Confirm Password
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Confirm your new password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="h-12 rounded-lg border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
           {error && <p className="text-sm text-red-500">{error}</p>}
 
           <Button
@@ -181,29 +176,8 @@ export default function SignUpForm() {
             className="w-full h-12 rounded-full bg-black text-white hover:bg-gray-800 text-sm font-medium"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Creating account..." : "Create account"}
+            {isSubmitting ? "Updating..." : "Reset Password"}
           </Button>
-
-          <div className="text-xs text-center text-gray-500 mt-6">
-            By creating an account, you agree to our{" "}
-            <Link to="/" className="text-blue-600 hover:underline">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link to="/" className="text-blue-600 hover:underline">
-              Privacy Policy
-            </Link>
-          </div>
-
-          <div className="text-sm text-center text-gray-600 mt-6">
-            Already have an account?{" "}
-            <Link
-              to="/login"
-              className="text-blue-600 hover:underline font-medium"
-            >
-              Sign in
-            </Link>
-          </div>
         </form>
       </div>
     </AuthLayout>
