@@ -63,7 +63,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
     } catch (error) {
       console.error("Authentication error:", error);
-      if (error.message === "Failed to fetch") {
+      if (
+        error.message === "Failed to fetch" ||
+        error?.code === "ERR_NAME_NOT_RESOLVED"
+      ) {
         throw new Error(
           "Unable to connect to authentication service. Please check your internet connection and try again.",
         );
