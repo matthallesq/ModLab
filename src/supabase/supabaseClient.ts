@@ -8,6 +8,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // Log for debugging (remove in production)
 console.log("Supabase URL:", supabaseUrl);
 console.log("Supabase Anon Key available:", !!supabaseAnonKey);
+console.log("Supabase client initialization");
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error("Supabase environment variables are missing");
