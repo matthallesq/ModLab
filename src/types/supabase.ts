@@ -1,296 +1,144 @@
+// This file contains simplified type definitions that were previously from Supabase
+
 export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
+// Database types for Supabase
 export type Database = {
   public: {
     Tables: {
-      payment_history: {
-        Row: {
-          amount: number
-          created_at: string | null
-          currency: string
-          description: string | null
-          id: string
-          payment_method: string | null
-          status: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          currency?: string
-          description?: string | null
-          id?: string
-          payment_method?: string | null
-          status: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          currency?: string
-          description?: string | null
-          id?: string
-          payment_method?: string | null
-          status?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       projects: {
         Row: {
-          created_at: string | null
-          description: string | null
-          id: string
-          name: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      subscription_limits: {
-        Row: {
-          advanced_analytics: boolean
-          max_experiments_per_project: number
-          max_projects: number
-          priority_support: boolean
-          team_members_allowed: boolean
-          tier: string
-        }
-        Insert: {
-          advanced_analytics: boolean
-          max_experiments_per_project: number
-          max_projects: number
-          priority_support: boolean
-          team_members_allowed: boolean
-          tier: string
-        }
-        Update: {
-          advanced_analytics?: boolean
-          max_experiments_per_project?: number
-          max_projects?: number
-          priority_support?: boolean
-          team_members_allowed?: boolean
-          tier?: string
-        }
-        Relationships: []
-      }
-      subscriptions: {
-        Row: {
-          created_at: string | null
-          current_period_end: string
-          current_period_start: string
-          id: string
-          status: string
-          tier: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          current_period_end: string
-          current_period_start: string
-          id?: string
-          status: string
-          tier: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          current_period_end?: string
-          current_period_start?: string
-          id?: string
-          status?: string
-          tier?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
+          created_at: string | null;
+          description: string | null;
+          id: string;
+          name: string;
+          updated_at: string | null;
+          user_id: string | null;
+          team_id?: string | null;
+          model_type?: string | null;
+          archived?: boolean | null;
+        };
+      };
       users: {
         Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string | null
-          full_name: string | null
-          id: string
-          image: string | null
-          name: string | null
-          token_identifier: string
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id: string
-          image?: string | null
-          name?: string | null
-          token_identifier: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          image?: string | null
-          name?: string | null
-          token_identifier?: string
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+          avatar_url: string | null;
+          created_at: string;
+          email: string | null;
+          full_name: string | null;
+          id: string;
+          name: string | null;
+          updated_at: string | null;
+        };
+      };
+      teams: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+          updated_at: string;
+          owner_id: string;
+        };
+      };
+      team_members: {
+        Row: {
+          id: string;
+          team_id: string;
+          user_id: string | null;
+          name: string;
+          email: string;
+          avatar: string;
+          role: string;
+        };
+      };
+      experiments: {
+        Row: {
+          id: string;
+          title: string;
+          hypothesis: string;
+          test_description: string;
+          success_criteria: string;
+          status: string;
+          priority: string;
+          results: string | null;
+          created_at: string;
+          updated_at: string;
+          due_date: string | null;
+          project_id: string;
+        };
+      };
+      insights: {
+        Row: {
+          id: string;
+          title: string;
+          type: string | null;
+          hypothesis: string | null;
+          observation: string | null;
+          insight_text: string;
+          next_steps: string | null;
+          created_at: string;
+          updated_at: string;
+          project_id: string;
+          experiment_id: string | null;
+        };
+      };
+      timeline_events: {
+        Row: {
+          id: string;
+          type: string;
+          title: string;
+          description: string | null;
+          timestamp: string;
+          entity_id: string | null;
+          entity_type: string | null;
+          user_id: string;
+          user_name: string | null;
+          project_id: string;
+        };
+      };
+      project_team_members: {
+        Row: {
+          id: string;
+          project_id: string;
+          team_member_id: string;
+        };
+      };
+      experiment_team_members: {
+        Row: {
+          id: string;
+          experiment_id: string;
+          team_member_id: string;
+        };
+      };
+      insight_team_members: {
+        Row: {
+          id: string;
+          insight_id: string;
+          team_member_id: string;
+        };
+      };
+    };
+  };
+};
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+// These type definitions are kept for backward compatibility
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
 
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+export type TablesInsert<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
 
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
-
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
 
 export const Constants = {
   public: {
     Enums: {},
   },
-} as const
+} as const;

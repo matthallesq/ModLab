@@ -1,5 +1,5 @@
 import UserProfile from "../auth/UserProfile";
-import { useAuth } from "../../../supabase/auth";
+import { useAuth } from "../../auth/fileAuth";
 import { Navigate } from "react-router-dom";
 import { LoadingScreen } from "../ui/loading-spinner";
 

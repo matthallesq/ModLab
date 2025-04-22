@@ -7,7 +7,7 @@ import React, {
   useEffect,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../supabase/supabase";
+import { supabase } from "../supabase/supabaseClient";
 import {
   ModelType,
   Project,
@@ -1451,25 +1451,41 @@ function ProjectProvider({ children }: { children: ReactNode }) {
 
   // Add or update an insight
   const saveInsight = useCallback(
-    (projectId: string, insight: Insight) => {
-      setInsights((prev) => {
-        const projectInsights = prev[projectId] || [];
-        const existingIndex = projectInsights.findIndex(
-          (i) => i.id === insight.id,
-        );
+    async (projectId: string, insight: Insight) => {
+      try {
+        let savedInsight;
 
-        let updatedProjectInsights;
-        if (existingIndex >= 0) {
-          // Update existing insight
-          updatedProjectInsights = [...projectInsights];
-          updatedProjectInsights[existingIndex] = insight;
-        } else {
-          // Add new insight
-          updatedProjectInsights = [...projectInsights, insight];
+        if (insight.id && insight.id.startsWith("insight-")) {
+          // This is a new insight with a temporary ID
+          const { id, ...insightData } = insight;
+
+          // Insert new insight into Supabase
+          const { data, error } = await supabase
+            .from("insights")
+            .insert({
+              ...insightData,
+              project_id: projectId,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+          savedInsight = { ...data, id: data.id };
+
+          // Add a timeline event for the new insight
+          await addInsightEvent(
+            projectId,
+            insight.title,
+            insight.insight_text.substring(0, 100) +
+              (insight.insight_text.length > 100 ? "..." : ""),
+            savedInsight.id,
+          );
 
           // Update project analytics
           setProjects((prevProjects) => {
-            const updatedProjects = prevProjects.map((project) => {
+            return prevProjects.map((project) => {
               if (project.id === projectId) {
                 return {
                   ...project,
@@ -1481,47 +1497,117 @@ function ProjectProvider({ children }: { children: ReactNode }) {
               }
               return project;
             });
+          });
+        } else {
+          // Update existing insight
+          const { error } = await supabase
+            .from("insights")
+            .update({
+              title: insight.title,
+              type: insight.type,
+              hypothesis: insight.hypothesis,
+              observation: insight.observation,
+              insight_text: insight.insight_text,
+              next_steps: insight.next_steps,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", insight.id);
 
-            // Save updated projects to localStorage
-            try {
-              localStorage.setItem(
-                "modellab_projects",
-                JSON.stringify(updatedProjects),
+          if (error) throw error;
+          savedInsight = insight;
+        }
+
+        // Update local state
+        setInsights((prev) => {
+          const projectInsights = prev[projectId] || [];
+          const existingIndex = projectInsights.findIndex(
+            (i) => i.id === savedInsight.id,
+          );
+
+          let updatedProjectInsights;
+          if (existingIndex >= 0) {
+            // Update existing insight
+            updatedProjectInsights = [...projectInsights];
+            updatedProjectInsights[existingIndex] = savedInsight;
+          } else {
+            // Add new insight
+            updatedProjectInsights = [...projectInsights, savedInsight];
+          }
+
+          return {
+            ...prev,
+            [projectId]: updatedProjectInsights,
+          };
+        });
+
+        return savedInsight;
+      } catch (error: any) {
+        console.error("Error saving insight:", error);
+
+        // Fall back to local implementation in development
+        if (import.meta.env.DEV) {
+          setInsights((prev) => {
+            const projectInsights = prev[projectId] || [];
+            const existingIndex = projectInsights.findIndex(
+              (i) => i.id === insight.id,
+            );
+
+            let updatedProjectInsights;
+            if (existingIndex >= 0) {
+              // Update existing insight
+              updatedProjectInsights = [...projectInsights];
+              updatedProjectInsights[existingIndex] = insight;
+            } else {
+              // Add new insight with temporary ID if none exists
+              const newInsight = {
+                ...insight,
+                id: insight.id || `insight-${Date.now()}`,
+                created_at: insight.created_at || new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              };
+              updatedProjectInsights = [...projectInsights, newInsight];
+
+              // Update project analytics
+              setProjects((prevProjects) => {
+                return prevProjects.map((project) => {
+                  if (project.id === projectId) {
+                    return {
+                      ...project,
+                      analytics: {
+                        ...project.analytics,
+                        totalInsights:
+                          (project.analytics?.totalInsights || 0) + 1,
+                      },
+                    };
+                  }
+                  return project;
+                });
+              });
+
+              // Add a timeline event for the new insight
+              addInsightEvent(
+                projectId,
+                newInsight.title,
+                newInsight.insight_text.substring(0, 100) +
+                  (newInsight.insight_text.length > 100 ? "..." : ""),
+                newInsight.id,
               );
-            } catch (error) {
-              console.error("Failed to save projects to localStorage", error);
+
+              return {
+                ...prev,
+                [projectId]: updatedProjectInsights,
+              };
             }
 
-            return updatedProjects;
+            return {
+              ...prev,
+              [projectId]: updatedProjectInsights,
+            };
           });
-
-          // Add a timeline event for the new insight
-          addInsightEvent(
-            projectId,
-            insight.title,
-            insight.insight_text.substring(0, 100) +
-              (insight.insight_text.length > 100 ? "..." : ""),
-            insight.id,
-          );
         }
 
-        const updatedInsights = {
-          ...prev,
-          [projectId]: updatedProjectInsights,
-        };
-
-        // Save to localStorage
-        try {
-          localStorage.setItem(
-            "modellab_insights",
-            JSON.stringify(updatedInsights),
-          );
-        } catch (error) {
-          console.error("Failed to save insights to localStorage", error);
-        }
-
-        return updatedInsights;
-      });
+        throw error;
+      }
     },
     [addInsightEvent],
   );

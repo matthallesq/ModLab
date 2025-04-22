@@ -16,7 +16,7 @@ import ProjectsPageWrapper from "./components/pages/ProjectsPageWrapper";
 import TeamPage from "./components/pages/team";
 import ProfilePage from "./components/pages/profile";
 import SubscriptionPageWrapper from "./components/pages/SubscriptionPageWrapper";
-import { AuthProvider, useAuth } from "../supabase/auth";
+import { AuthProvider, useAuth } from "./auth/fileAuth";
 import { ProjectProvider } from "./contexts/ProjectContext";
 import { ExperimentProvider } from "./contexts/ExperimentContext";
 import { Toaster } from "./components/ui/toaster";
