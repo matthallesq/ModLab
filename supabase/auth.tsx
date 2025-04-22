@@ -55,11 +55,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Authentication error:", error);
+      if (error.message === "Failed to fetch") {
+        throw new Error(
+          "Unable to connect to authentication service. Please check your internet connection and try again.",
+        );
+      }
+      throw error;
+    }
   };
 
   const signOut = async () => {

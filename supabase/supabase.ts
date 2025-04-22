@@ -22,4 +22,46 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       "x-application-name": "modellab",
     },
   },
+  // Add fetch implementation with timeout and retry logic
+  fetch: (url, options) => {
+    const fetchWithTimeout = (timeout) => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+      return fetch(url, {
+        ...options,
+        signal: controller.signal,
+      })
+        .then((response) => {
+          clearTimeout(timeoutId);
+          return response;
+        })
+        .catch((error) => {
+          clearTimeout(timeoutId);
+          throw error;
+        });
+    };
+
+    // Implement retry logic
+    const MAX_RETRIES = 3;
+    const TIMEOUT_MS = 10000; // 10 seconds
+
+    const attemptFetch = (retriesLeft) => {
+      return fetchWithTimeout(TIMEOUT_MS).catch((error) => {
+        if (
+          retriesLeft > 0 &&
+          (error.name === "AbortError" || error.message === "Failed to fetch")
+        ) {
+          console.log(
+            `Fetch attempt failed, retrying... (${MAX_RETRIES - retriesLeft + 1}/${MAX_RETRIES})`,
+          );
+          return new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second before retry
+            .then(() => attemptFetch(retriesLeft - 1));
+        }
+        throw error;
+      });
+    };
+
+    return attemptFetch(MAX_RETRIES);
+  },
 });
