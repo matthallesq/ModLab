@@ -79,10 +79,10 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
     setIsMemberModalOpen(true);
   };
 
-  const handleSaveMember = () => {
+  const handleSaveMember = async () => {
     if (!selectedTeam || !memberName.trim() || !memberEmail.trim()) return;
 
-    addTeamMember(selectedTeam.id, {
+    await addTeamMember(selectedTeam.id, {
       name: memberName,
       email: memberEmail,
       role: memberRole,

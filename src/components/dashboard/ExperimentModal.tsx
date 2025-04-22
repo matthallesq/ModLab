@@ -138,7 +138,7 @@ const ExperimentModal = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Ensure assignees and timestamps are included in the saved data
     const experimentToSave = {
@@ -152,7 +152,7 @@ const ExperimentModal = ({
       "Saving experiment with assignees:",
       experimentToSave.assignees,
     );
-    onSave(experimentToSave);
+    await onSave(experimentToSave);
   };
 
   const nextStep = () => {

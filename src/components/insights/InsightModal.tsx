@@ -106,7 +106,7 @@ const InsightModal: React.FC<InsightModalProps> = ({
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title || !insightText) return;
 
     const insightData = {
@@ -122,7 +122,7 @@ const InsightModal: React.FC<InsightModalProps> = ({
     };
 
     console.log("Saving insight with assignees:", selectedAssignees);
-    onSave(insightData, editingInsight?.id);
+    await onSave(insightData, editingInsight?.id);
 
     resetForm();
     onOpenChange(false);
