@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { Experiment, TeamMember } from "@/types/project";
 import { useProject } from "./ProjectContext";
-import { supabase } from "../../supabase/supabase";
+import { supabase } from "../../supabase/supabaseClient";
 
 interface ExperimentContextType {
   experiments: Record<string, Experiment[]>;
