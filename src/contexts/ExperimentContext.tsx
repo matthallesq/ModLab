@@ -46,7 +46,7 @@ const ExperimentContext = createContext<ExperimentContextType | undefined>(
 );
 
 // Define the provider as a named function component
-export function ExperimentProvider({ children }: { children: ReactNode }) {
+function ExperimentProvider({ children }: { children: ReactNode }) {
   // Store experiments in state, fetched from Supabase
   const [experiments, setExperiments] = useState<Record<string, Experiment[]>>(
     {},
@@ -727,7 +727,7 @@ export function ExperimentProvider({ children }: { children: ReactNode }) {
 }
 
 // Define the hook as a named function
-export function useExperiments() {
+function useExperiments() {
   const context = useContext(ExperimentContext);
   if (context === undefined) {
     throw new Error("useExperiments must be used within an ExperimentProvider");
@@ -735,5 +735,5 @@ export function useExperiments() {
   return context;
 }
 
-// Export the context directly
-export { ExperimentContext };
+// Export everything consistently
+export { ExperimentContext, ExperimentProvider, useExperiments };

@@ -19,7 +19,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../../supabase/auth";
+import { useAuth } from "../../auth/fileAuth";
 
 export default function LandingPage() {
   const { user, signOut } = useAuth();
