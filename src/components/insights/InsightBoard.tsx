@@ -9,11 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Filter } from "lucide-react";
+import { Plus, Search, Filter, Trash2 } from "lucide-react";
 import InsightCard from "./InsightCard";
 import InsightModal from "./InsightModal";
 import { Insight, TeamMember } from "@/types/project";
-import { sampleInsights } from "./sampleInsights";
 
 interface InsightBoardProps {
   isLoading?: boolean;
@@ -24,7 +23,8 @@ const InsightBoard: React.FC<InsightBoardProps> = ({
   isLoading = false,
   projectId: propProjectId,
 }) => {
-  const { selectedProject } = useProject();
+  const { selectedProject, getInsights, saveInsight, deleteInsight } =
+    useProject();
   const effectiveProjectId = propProjectId || selectedProject?.id;
   const [insights, setInsights] = useState<Insight[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,12 +36,14 @@ const InsightBoard: React.FC<InsightBoardProps> = ({
   );
   const [currentAssignees, setCurrentAssignees] = useState<TeamMember[]>([]);
 
-  // Load insights (from sample data for now)
+  // Load insights from context
   useEffect(() => {
-    // In a real app, this would fetch from an API based on projectId
-    console.log(`Fetching insights for project: ${effectiveProjectId}`);
-    setInsights(sampleInsights);
-  }, [effectiveProjectId]);
+    if (effectiveProjectId) {
+      console.log(`Fetching insights for project: ${effectiveProjectId}`);
+      const projectInsights = getInsights(effectiveProjectId);
+      setInsights(projectInsights);
+    }
+  }, [effectiveProjectId, getInsights]);
 
   // Filter insights based on search term and type filter
   const filteredInsights = insights.filter((insight) => {
@@ -71,9 +73,14 @@ const InsightBoard: React.FC<InsightBoardProps> = ({
   };
 
   const handleDeleteInsight = (insightId: string) => {
-    // This would show a confirmation dialog in a real implementation
-    console.log("Delete insight:", insightId);
-    setInsights(insights.filter((insight) => insight.id !== insightId));
+    if (effectiveProjectId) {
+      // Delete insight from context
+      deleteInsight(effectiveProjectId, insightId);
+      // Update local state
+      setInsights(insights.filter((insight) => insight.id !== insightId));
+      // Show feedback to user
+      console.log(`Insight ${insightId} deleted successfully`);
+    }
   };
 
   const handleCreateInsight = () => {
@@ -101,19 +108,29 @@ const InsightBoard: React.FC<InsightBoardProps> = ({
     },
     insightId?: string,
   ) => {
+    if (!effectiveProjectId) return;
+
     if (insightId) {
       // Update existing insight
-      const updatedInsights = insights.map((insight) =>
-        insight.id === insightId
-          ? {
-              ...insight,
-              ...newInsight,
-              assignees: currentAssignees, // Use currentAssignees instead of newInsight.assignees
-              updated_at: new Date().toISOString(),
-            }
-          : insight,
+      const updatedInsight: Insight = {
+        ...newInsight,
+        id: insightId,
+        created_at: currentInsight?.created_at || new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        project_id: effectiveProjectId,
+        assignees: currentAssignees,
+      };
+
+      // Save to context
+      saveInsight(effectiveProjectId, updatedInsight);
+
+      // Update local state
+      setInsights(
+        insights.map((insight) =>
+          insight.id === insightId ? updatedInsight : insight,
+        ),
       );
-      setInsights(updatedInsights);
+
       console.log("Updated insight with assignees:", currentAssignees);
     } else {
       // Create new insight
@@ -122,9 +139,16 @@ const InsightBoard: React.FC<InsightBoardProps> = ({
         id: `insight-${Date.now()}`,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        assignees: currentAssignees, // Use currentAssignees
+        project_id: effectiveProjectId,
+        assignees: currentAssignees,
       };
+
+      // Save to context
+      saveInsight(effectiveProjectId, createdInsight);
+
+      // Update local state
       setInsights([createdInsight, ...insights]);
+
       console.log("Created new insight with assignees:", currentAssignees);
     }
   };

@@ -10,6 +10,11 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
+  updateProfile: (data: {
+    full_name?: string;
+    avatar_url?: string;
+  }) => Promise<void>;
+  getUserProfile: () => Promise<any>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,6 +81,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw error;
   };
 
+  const updateProfile = async (data: {
+    full_name?: string;
+    avatar_url?: string;
+  }) => {
+    const { error } = await supabase.auth.updateUser({
+      data,
+    });
+    if (error) throw error;
+
+    // Also update the user_profiles table
+    if (user) {
+      try {
+        await supabase.from("user_profiles").upsert({
+          id: user.id,
+          ...data,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (dbError) {
+        console.error("Error updating user_profiles table:", dbError);
+        // Continue even if this fails - the auth metadata is more important
+      }
+    }
+  };
+
+  const getUserProfile = async () => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -86,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
         resetPassword,
         updatePassword,
+        updateProfile,
+        getUserProfile,
       }}
     >
       {children}

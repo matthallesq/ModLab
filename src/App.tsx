@@ -14,8 +14,11 @@ import Success from "./components/pages/success";
 import LandingPage from "./components/pages/home";
 import ProjectsPageWrapper from "./components/pages/ProjectsPageWrapper";
 import TeamPage from "./components/pages/team";
+import ProfilePage from "./components/pages/profile";
 import SubscriptionPageWrapper from "./components/pages/SubscriptionPageWrapper";
 import { AuthProvider, useAuth } from "../supabase/auth";
+import { ProjectProvider } from "./contexts/ProjectContext";
+import { ExperimentProvider } from "./contexts/ExperimentContext";
 import { Toaster } from "./components/ui/toaster";
 import { LoadingScreen, LoadingSpinner } from "./components/ui/loading-spinner";
 
@@ -70,6 +73,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
           path="/subscription"
           element={
             <PrivateRoute>
@@ -88,10 +99,14 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <Suspense fallback={<LoadingScreen text="Loading application..." />}>
-        <AppRoutes />
-      </Suspense>
-      <Toaster />
+      <ProjectProvider>
+        <ExperimentProvider>
+          <Suspense fallback={<LoadingScreen text="Loading application..." />}>
+            <AppRoutes />
+          </Suspense>
+          <Toaster />
+        </ExperimentProvider>
+      </ProjectProvider>
     </AuthProvider>
   );
 }

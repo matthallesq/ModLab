@@ -18,6 +18,26 @@ export interface Team {
 
 export type ModelType = "business" | "product" | "social";
 
+export type TimelineEventType =
+  | "model_added"
+  | "model_updated"
+  | "experiment_created"
+  | "experiment_running"
+  | "experiment_completed"
+  | "insight_added";
+
+export interface TimelineEvent {
+  id: string;
+  type: TimelineEventType;
+  title: string;
+  description?: string;
+  timestamp: string;
+  entityId?: string; // ID of the related entity (model, experiment, insight)
+  entityType?: string; // Type of the related entity
+  userId: string;
+  userName?: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -34,6 +54,8 @@ export interface Project {
     totalExperiments: number;
     totalInsights: number;
   };
+  timelineEvents?: TimelineEvent[];
+  archived?: boolean;
 }
 
 export interface BusinessModel {
@@ -179,14 +201,14 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     description: "Perfect for small teams and startups",
     features: [
       "Up to 3 projects",
-      "Basic canvas features",
-      "Limited experiments (10/project)",
+      "All canvas features",
+      "Unlimited experiments",
       "Basic insights",
     ],
     limits: {
       projects: 3,
-      experiments: 10,
-      canvasFeatures: "basic",
+      experiments: "unlimited",
+      canvasFeatures: "all",
       insights: "basic",
     },
   },
@@ -197,15 +219,15 @@ export const SUBSCRIPTION_TIERS: SubscriptionTier[] = [
     description: "For growing businesses and teams",
     features: [
       "Up to 10 projects",
-      "Advanced canvas features",
-      "More experiments (50/project)",
+      "All canvas features",
+      "Unlimited experiments",
       "Advanced insights",
       "Team collaboration",
     ],
     limits: {
       projects: 10,
-      experiments: 50,
-      canvasFeatures: "advanced",
+      experiments: "unlimited",
+      canvasFeatures: "all",
       insights: "advanced",
       collaboration: true,
     },

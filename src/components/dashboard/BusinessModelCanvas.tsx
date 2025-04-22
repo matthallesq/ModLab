@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Plus,
   Save,
@@ -23,12 +24,6 @@ import {
   CanvasItemStatus,
   TeamMember,
 } from "@/types/project";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from "react-beautiful-dnd";
 import { sampleInsights } from "@/components/insights/sampleInsights";
 import {
   Tooltip,
@@ -197,26 +192,17 @@ const defaultCanvasData: CanvasData = {
   cost_structure: [],
 };
 
-// Status color mapping
-const statusColors = {
-  assumption: {
-    bg: "#f9fafb", // gray-50
-    border: "#e5e7eb", // gray-200
-    icon: HelpCircle,
-    iconColor: "#9ca3af", // gray-400
-  },
-  testing: {
-    bg: "#fffbeb", // amber-50
-    border: "#fcd34d", // amber-300
-    icon: AlertCircle,
-    iconColor: "#d97706", // amber-600
-  },
-  validated: {
-    bg: "#ecfdf5", // green-50
-    border: "#6ee7b7", // green-300
-    icon: CheckCircle,
-    iconColor: "#059669", // green-600
-  },
+const getStatusColor = (status: CanvasItemStatus) => {
+  switch (status) {
+    case "assumption":
+      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-200";
+    case "testing":
+      return "bg-blue-100 text-blue-800 hover:bg-blue-200";
+    case "validated":
+      return "bg-green-100 text-green-800 hover:bg-green-200";
+    default:
+      return "bg-gray-100 text-gray-800 hover:bg-gray-200";
+  }
 };
 
 const BusinessModelCanvas = ({
@@ -232,11 +218,8 @@ const BusinessModelCanvas = ({
   const [sections, setSections] = useState<CanvasSection[]>(
     mapCanvasDataToSections(initialData),
   );
-  const [editingItem, setEditingItem] = useState<{
-    sectionId: string;
-    itemId: string | null;
-  } | null>(null);
-  const [editContent, setEditContent] = useState("");
+  const [newItemText, setNewItemText] = useState("");
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
@@ -298,104 +281,53 @@ const BusinessModelCanvas = ({
     setShowInsightDialog(true);
   };
 
-  const handleAddItem = (sectionId: string) => {
-    const section = sections.find((s) => s.id === sectionId);
-    if (!section) return;
+  const handleAddItem = () => {
+    if (!selectedSection || !newItemText.trim()) return;
 
-    setEditingItem({
-      sectionId,
-      itemId: null, // null means we're adding a new item
-    });
-    setEditContent("");
-  };
-
-  const handleEditItem = (
-    sectionId: string,
-    itemId: string,
-    content: string,
-  ) => {
-    setEditingItem({
-      sectionId,
-      itemId,
-    });
-    setEditContent(content);
-  };
-
-  const handleDeleteItem = (sectionId: string, itemId: string) => {
-    setSections(
-      sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: section.items.filter((item) => item.id !== itemId),
-            }
-          : section,
-      ),
-    );
-    setIsDirty(true);
-  };
-
-  const handleSaveItem = () => {
-    if (!editingItem) return;
-
-    const { sectionId, itemId } = editingItem;
+    const newItem: CanvasItemWithId = {
+      id: `${selectedSection}-${Date.now()}`,
+      text: newItemText,
+      status: "assumption",
+    };
 
     setSections(
       sections.map((section) => {
-        if (section.id !== sectionId) return section;
-
-        if (itemId === null) {
-          // Adding a new item
+        if (section.id === selectedSection) {
           return {
             ...section,
-            items: [
-              ...section.items,
-              {
-                id: `${sectionId}-${Date.now()}`,
-                text: editContent,
-                status: "assumption", // Default status for new items
-              },
-            ],
-          };
-        } else {
-          // Editing an existing item
-          return {
-            ...section,
-            items: section.items.map((item) =>
-              item.id === itemId ? { ...item, text: editContent } : item,
-            ),
+            items: [...section.items, newItem],
           };
         }
+        return section;
       }),
     );
 
-    setEditingItem(null);
-    setEditContent("");
+    setNewItemText("");
+    setSelectedSection(null);
     setIsDirty(true);
-  };
-
-  const handleCancel = () => {
-    setEditingItem(null);
-    setEditContent("");
   };
 
   // Handle status change for an item
   const handleStatusChange = (
     sectionId: string,
-    itemId: string,
-    status: CanvasItemStatus,
+    itemIndex: number,
+    newStatus: CanvasItemStatus,
   ) => {
     setSections(
-      sections.map((section) =>
-        section.id === sectionId
-          ? {
-              ...section,
-              items: section.items.map((item) =>
-                item.id === itemId ? { ...item, status } : item,
-              ),
-            }
-          : section,
-      ),
+      sections.map((section) => {
+        if (section.id === sectionId) {
+          const updatedItems = [...section.items];
+          updatedItems[itemIndex] = {
+            ...updatedItems[itemIndex],
+            status: newStatus,
+          };
+          return {
+            ...section,
+            items: updatedItems,
+          };
+        }
+        return section;
+      }),
     );
     setIsDirty(true);
   };
@@ -434,84 +366,75 @@ const BusinessModelCanvas = ({
     }, 3000);
   };
 
-  const handleDragEnd = (result: DropResult) => {
-    const { source, destination } = result;
+  const renderCanvasSection = (
+    title: string,
+    sectionId: string,
+    sectionKey: keyof CanvasData,
+  ) => {
+    const section = sections.find((s) => s.id === sectionId);
+    if (!section) return null;
 
-    // Dropped outside the list
-    if (!destination) {
-      return;
-    }
-
-    // Same position
-    if (
-      source.droppableId === destination.droppableId &&
-      source.index === destination.index
-    ) {
-      return;
-    }
-
-    // Find source and destination sections
-    const sourceSection = sections.find((s) => s.id === source.droppableId);
-    const destSection = sections.find((s) => s.id === destination.droppableId);
-
-    if (!sourceSection || !destSection) return;
-
-    // Create a new sections array to update state
-    const newSections = [...sections];
-
-    // Handle moving within the same section
-    if (source.droppableId === destination.droppableId) {
-      const sectionIndex = newSections.findIndex(
-        (s) => s.id === source.droppableId,
-      );
-      const items = [...newSections[sectionIndex].items];
-      const [removed] = items.splice(source.index, 1);
-      items.splice(destination.index, 0, removed);
-
-      newSections[sectionIndex] = {
-        ...newSections[sectionIndex],
-        items,
-      };
-    }
-    // Handle moving between different sections
-    else {
-      const sourceIndex = newSections.findIndex(
-        (s) => s.id === source.droppableId,
-      );
-      const destIndex = newSections.findIndex(
-        (s) => s.id === destination.droppableId,
-      );
-
-      const sourceItems = [...newSections[sourceIndex].items];
-      const destItems = [...newSections[destIndex].items];
-
-      const [removed] = sourceItems.splice(source.index, 1);
-      destItems.splice(destination.index, 0, removed);
-
-      newSections[sourceIndex] = {
-        ...newSections[sourceIndex],
-        items: sourceItems,
-      };
-
-      newSections[destIndex] = {
-        ...newSections[destIndex],
-        items: destItems,
-      };
-    }
-
-    setSections(newSections);
-    setIsDirty(true);
+    return (
+      <Card className="p-4 h-full">
+        <h3 className="font-medium mb-2">{title}</h3>
+        <div className="space-y-2">
+          {section.items.map((item, index) => (
+            <div
+              key={item.id}
+              className="p-2 bg-white border rounded-md flex justify-between items-center"
+            >
+              <span className="text-sm">{item.text}</span>
+              <Badge
+                className={`cursor-pointer ${getStatusColor(item.status)}`}
+                onClick={() => {
+                  const nextStatus: Record<CanvasItemStatus, CanvasItemStatus> =
+                    {
+                      assumption: "testing",
+                      testing: "validated",
+                      validated: "assumption",
+                    };
+                  handleStatusChange(sectionId, index, nextStatus[item.status]);
+                }}
+              >
+                {item.status}
+              </Badge>
+            </div>
+          ))}
+          {selectedSection === sectionId && (
+            <div className="mt-2 flex space-x-2">
+              <Input
+                value={newItemText}
+                onChange={(e) => setNewItemText(e.target.value)}
+                placeholder="Add new item"
+                className="flex-1"
+              />
+              <Button size="sm" onClick={handleAddItem}>
+                Add
+              </Button>
+            </div>
+          )}
+          {selectedSection !== sectionId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-2"
+              onClick={() => setSelectedSection(sectionId)}
+            >
+              + Add Item
+            </Button>
+          )}
+        </div>
+      </Card>
+    );
   };
 
-  // Get status icon component based on status
-  const getStatusIcon = (status: CanvasItemStatus) => {
-    const { icon: Icon, iconColor } = statusColors[status];
-    return <Icon className="h-4 w-4" style={{ color: iconColor }} />;
-  };
+  if (isLoading) {
+    return <div className="p-8 text-center">Loading canvas...</div>;
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-bold">Business Model Canvas</h2>
         <div className="flex items-center gap-2">
           {isDirty && (
@@ -535,324 +458,45 @@ const BusinessModelCanvas = ({
         </div>
       </div>
 
-      <div className="flex items-center gap-4 mb-4">
-        <div className="text-sm font-medium">Status Legend:</div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1">
-            <div className="h-4 w-4 rounded-full bg-gray-100 border border-gray-200"></div>
-            <span className="text-sm">Assumption</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="h-4 w-4 rounded-full bg-amber-50 border border-amber-300"></div>
-            <span className="text-sm">Testing</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="h-4 w-4 rounded-full bg-green-50 border border-green-300"></div>
-            <span className="text-sm">Validated</span>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {renderCanvasSection("Key Partners", "key-partners", "key_partners")}
+        {renderCanvasSection(
+          "Key Activities",
+          "key-activities",
+          "key_activities",
+        )}
+        {renderCanvasSection("Key Resources", "key-resources", "key_resources")}
       </div>
-
-      <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-3 gap-4">
-          {sections.map((section) => (
-            <Card
-              key={section.id}
-              className={`shadow-sm transition-opacity ${isLoading ? "opacity-60" : ""}`}
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-md font-medium flex justify-between items-center">
-                  <span>{section.title}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => handleAddItem(section.id)}
-                    disabled={isLoading}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {editingItem?.sectionId === section.id ? (
-                  <div className="space-y-2">
-                    <Textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="min-h-[100px] text-sm"
-                      placeholder={`Add your ${section.title.toLowerCase()} here...`}
-                      autoFocus
-                    />
-                    <div className="flex justify-end space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCancel}
-                      >
-                        Cancel
-                      </Button>
-                      <Button size="sm" onClick={handleSaveItem}>
-                        Save
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {/* Related Insights */}
-                    {getInsightsForSection(section.key).length > 0 && (
-                      <div className="mb-3">
-                        <h4 className="text-xs font-semibold uppercase text-blue-500 mb-1 flex items-center">
-                          <Lightbulb className="h-3 w-3 mr-1" /> Related
-                          Insights
-                        </h4>
-                        <div className="flex flex-wrap gap-1">
-                          {getInsightsForSection(section.key).map((insight) => (
-                            <TooltipProvider key={insight.id}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 text-xs bg-blue-50 border-blue-100 hover:bg-blue-100 px-2"
-                                    onClick={() => handleViewInsight(insight)}
-                                  >
-                                    {insight.title.length > 20
-                                      ? `${insight.title.substring(0, 20)}...`
-                                      : insight.title}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p className="font-medium">{insight.title}</p>
-                                  <p className="text-xs">
-                                    {insight.insight_text.substring(0, 100)}...
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {section.items.length > 0 ? (
-                      <Droppable droppableId={section.id}>
-                        {(provided, snapshot) => (
-                          <div
-                            className="space-y-2 min-h-[50px] transition-colors duration-200"
-                            {...provided.droppableProps}
-                            ref={provided.innerRef}
-                            style={{
-                              backgroundColor: snapshot.isDraggingOver
-                                ? "rgba(236, 253, 245, 0.4)"
-                                : "transparent",
-                              borderRadius: "0.375rem",
-                              padding: snapshot.isDraggingOver ? "0.5rem" : "0",
-                            }}
-                          >
-                            {section.items.map((item, index) => (
-                              <Draggable
-                                key={item.id}
-                                draggableId={item.id}
-                                index={index}
-                              >
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    className={`p-2 text-sm border rounded-md group flex items-start transition-all duration-200 ${snapshot.isDragging ? "border-blue-400 bg-blue-50 shadow-md" : "border-gray-200 hover:border-gray-300 hover:bg-gray-50 shadow-sm hover:shadow"}`}
-                                    style={{
-                                      backgroundColor:
-                                        statusColors[item.status].bg,
-                                      borderColor:
-                                        statusColors[item.status].border,
-                                    }}
-                                  >
-                                    <div className="flex-grow">
-                                      <div className="flex items-center mb-1">
-                                        <div className="flex space-x-1 mr-2">
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleStatusChange(
-                                                      section.id,
-                                                      item.id,
-                                                      "assumption",
-                                                    )
-                                                  }
-                                                  className={`h-4 w-4 rounded-full ${item.status === "assumption" ? "ring-2 ring-offset-1 ring-blue-500" : ""}`}
-                                                  style={{
-                                                    backgroundColor:
-                                                      statusColors.assumption
-                                                        .bg,
-                                                    borderColor:
-                                                      statusColors.assumption
-                                                        .border,
-                                                  }}
-                                                >
-                                                  {item.status ===
-                                                    "assumption" && (
-                                                    <div className="h-2 w-2 rounded-full bg-blue-500 m-auto"></div>
-                                                  )}
-                                                </button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p className="text-xs">
-                                                  Assumption
-                                                </p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleStatusChange(
-                                                      section.id,
-                                                      item.id,
-                                                      "testing",
-                                                    )
-                                                  }
-                                                  className={`h-4 w-4 rounded-full ${item.status === "testing" ? "ring-2 ring-offset-1 ring-blue-500" : ""}`}
-                                                  style={{
-                                                    backgroundColor:
-                                                      statusColors.testing.bg,
-                                                    borderColor:
-                                                      statusColors.testing
-                                                        .border,
-                                                  }}
-                                                >
-                                                  {item.status ===
-                                                    "testing" && (
-                                                    <div className="h-2 w-2 rounded-full bg-blue-500 m-auto"></div>
-                                                  )}
-                                                </button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p className="text-xs">
-                                                  Testing
-                                                </p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-
-                                          <TooltipProvider>
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleStatusChange(
-                                                      section.id,
-                                                      item.id,
-                                                      "validated",
-                                                    )
-                                                  }
-                                                  className={`h-4 w-4 rounded-full ${item.status === "validated" ? "ring-2 ring-offset-1 ring-blue-500" : ""}`}
-                                                  style={{
-                                                    backgroundColor:
-                                                      statusColors.validated.bg,
-                                                    borderColor:
-                                                      statusColors.validated
-                                                        .border,
-                                                  }}
-                                                >
-                                                  {item.status ===
-                                                    "validated" && (
-                                                    <div className="h-2 w-2 rounded-full bg-blue-500 m-auto"></div>
-                                                  )}
-                                                </button>
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p className="text-xs">
-                                                  Validated
-                                                </p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          </TooltipProvider>
-                                        </div>
-                                        <span className="text-xs text-gray-500 flex items-center">
-                                          {getStatusIcon(item.status)}
-                                          <span className="ml-1">
-                                            {item.status
-                                              .charAt(0)
-                                              .toUpperCase() +
-                                              item.status.slice(1)}
-                                          </span>
-                                        </span>
-                                      </div>
-                                      <p className="whitespace-pre-wrap">
-                                        {item.text}
-                                      </p>
-                                    </div>
-                                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                                      <div
-                                        {...provided.dragHandleProps}
-                                        className="cursor-grab p-1 hover:bg-gray-100 rounded"
-                                      >
-                                        <GripVertical className="h-3 w-3 text-gray-500" />
-                                      </div>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 hover:bg-gray-100 rounded"
-                                        onClick={() =>
-                                          handleEditItem(
-                                            section.id,
-                                            item.id,
-                                            item.text,
-                                          )
-                                        }
-                                        disabled={isLoading}
-                                      >
-                                        <Edit className="h-3 w-3 text-gray-500" />
-                                      </Button>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-600"
-                                        onClick={() =>
-                                          handleDeleteItem(section.id, item.id)
-                                        }
-                                        disabled={isLoading}
-                                      >
-                                        <X className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    ) : (
-                      <div
-                        className="min-h-[100px] p-2 text-sm border border-dashed border-gray-200 rounded-md hover:border-gray-300 hover:bg-gray-50 cursor-pointer flex items-center justify-center transition-all duration-200"
-                        onClick={() => handleAddItem(section.id)}
-                      >
-                        <div className="flex flex-col items-center text-gray-400 hover:text-gray-500 transition-colors">
-                          <Plus className="h-5 w-5 mb-1" />
-                          <p className="italic">
-                            Click to add {section.title.toLowerCase()}...
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </DragDropContext>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        {renderCanvasSection(
+          "Value Propositions",
+          "value-propositions",
+          "value_propositions",
+        )}
+        {renderCanvasSection(
+          "Customer Relationships",
+          "customer-relationships",
+          "customer_relationships",
+        )}
+        {renderCanvasSection("Channels", "channels", "channels")}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {renderCanvasSection(
+          "Cost Structure",
+          "cost-structure",
+          "cost_structure",
+        )}
+        {renderCanvasSection(
+          "Revenue Streams",
+          "revenue-streams",
+          "revenue_streams",
+        )}
+        {renderCanvasSection(
+          "Customer Segments",
+          "customer-segments",
+          "customer_segments",
+        )}
+      </div>
 
       {/* Insight Dialog */}
       <Dialog open={showInsightDialog} onOpenChange={setShowInsightDialog}>

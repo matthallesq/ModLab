@@ -1,18 +1,45 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Calendar, Users, BarChart2 } from "lucide-react";
+import {
+  PlusCircle,
+  Calendar,
+  Users,
+  BarChart2,
+  MoreVertical,
+  Archive,
+  Trash2,
+} from "lucide-react";
 import { useProject } from "@/contexts/ProjectContext";
 import { format } from "date-fns";
 import Toolbar from "../dashboard/layout/Toolbar";
 import CreateProjectModal from "../dashboard/CreateProjectModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ProjectsPage = () => {
-  const { projects, createProject } = useProject();
+  const { projects, createProject, archiveProject, deleteProject } =
+    useProject();
   const navigate = useNavigate();
   const location = useLocation();
   const [isHovering, setIsHovering] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
 
   // Check if we should open the modal from navigation state
   useEffect(() => {
@@ -34,13 +61,43 @@ const ProjectsPage = () => {
     setIsCreateModalOpen(true);
   };
 
+  // Filter projects based on archived status
+  const filteredProjects = projects.filter((project) =>
+    showArchived ? project.archived : !project.archived,
+  );
+
+  const handleArchiveProject = (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation();
+    archiveProject(projectId);
+  };
+
+  const handleDeleteClick = (e: React.MouseEvent, projectId: string) => {
+    e.stopPropagation();
+    setProjectToDelete(projectId);
+  };
+
+  const confirmDelete = () => {
+    if (projectToDelete) {
+      deleteProject(projectToDelete);
+      setProjectToDelete(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f5f5f7]">
       <Toolbar />
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          {/* Blue 'New Project' button removed */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowArchived(!showArchived)}
+              className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+            >
+              <Archive className="h-4 w-4" />
+              {showArchived ? "Hide Archived" : "Show Archived"}
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -69,10 +126,10 @@ const ProjectsPage = () => {
           </Card>
 
           {/* Project Cards */}
-          {projects.map((project) => (
+          {filteredProjects.map((project) => (
             <Card
               key={project.id}
-              className="bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
+              className={`bg-white/90 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer ${project.archived ? "opacity-70" : ""}`}
               onClick={() => handleProjectClick(project.id)}
               onMouseEnter={() => setIsHovering(project.id)}
               onMouseLeave={() => setIsHovering(null)}
@@ -80,13 +137,45 @@ const ProjectsPage = () => {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-lg font-medium text-gray-900">
                   {project.name}
+                  {project.archived && (
+                    <span className="ml-2 text-xs text-gray-500 font-normal">
+                      (Archived)
+                    </span>
+                  )}
                 </CardTitle>
-                <div
-                  className={`h-8 w-8 rounded-full ${isHovering === project.id ? "bg-blue-50" : "bg-gray-50"} flex items-center justify-center transition-colors duration-200`}
-                >
-                  <BarChart2
-                    className={`h-4 w-4 ${isHovering === project.id ? "text-blue-500" : "text-gray-500"} transition-colors duration-200`}
-                  />
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      className="focus:outline-none"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="h-8 w-8 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center transition-colors duration-200">
+                        <MoreVertical className="h-4 w-4 text-gray-500" />
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={(e) => handleArchiveProject(e, project.id)}
+                      >
+                        <Archive className="mr-2 h-4 w-4" />
+                        {project.archived ? "Unarchive" : "Archive"}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-red-600 focus:text-red-600"
+                        onClick={(e) => handleDeleteClick(e, project.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div
+                    className={`h-8 w-8 rounded-full ${isHovering === project.id ? "bg-blue-50" : "bg-gray-50"} flex items-center justify-center transition-colors duration-200`}
+                  >
+                    <BarChart2
+                      className={`h-4 w-4 ${isHovering === project.id ? "text-blue-500" : "text-gray-500"} transition-colors duration-200`}
+                    />
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -138,6 +227,34 @@ const ProjectsPage = () => {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog
+        open={!!projectToDelete}
+        onOpenChange={() => setProjectToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to delete this project?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              project and all associated data including models, experiments, and
+              insights.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

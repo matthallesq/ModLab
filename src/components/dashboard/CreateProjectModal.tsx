@@ -50,7 +50,7 @@ const CreateProjectModal = ({ isOpen, onClose }: CreateProjectModalProps) => {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      createProject(data.name, data.description);
+      createProject(data.name, data.description, false);
       reset();
       onClose();
     } catch (error) {
